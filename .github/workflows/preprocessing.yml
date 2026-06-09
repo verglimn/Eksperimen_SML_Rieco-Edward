@@ -1,0 +1,83 @@
+name: Automated Preprocessing Pipeline
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "dataset_raw/**"
+      - "preprocessing/automate_RiecoEdward.py"
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:   # manual trigger via GitHub UI
+
+jobs:
+  preprocessing:
+    name: Run Preprocessing Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # 2. Set up Python 3.12.7 
+      - name: Set up Python 3.12.7
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.7"
+          cache: "pip"
+
+      # 3. Install Dependencies
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            numpy==1.26.4 \
+            pandas==2.2.2 \
+            scikit-learn==1.5.1 \
+            joblib==1.4.2
+
+      # 4. Run Preprocessing
+      - name: Run Preprocessing Script
+        working-directory: preprocessing
+        run: |
+          python automate_RiecoEdward.py \
+            --raw   ../dataset_raw/heart.csv \
+            --out_dir dataset_preprocessing
+
+      # 5. Verify Output Files
+      - name: Verify Output
+        run: |
+          echo "=== Output files ==="
+          ls -lh preprocessing/dataset_preprocessing/
+          echo ""
+          echo "=== Train shape ==="
+          python -c "
+          import pandas as pd
+          train = pd.read_csv('preprocessing/dataset_preprocessing/train.csv')
+          val   = pd.read_csv('preprocessing/dataset_preprocessing/val.csv')
+          test  = pd.read_csv('preprocessing/dataset_preprocessing/test.csv')
+          print(f'train : {train.shape}')
+          print(f'val   : {val.shape}')
+          print(f'test  : {test.shape}')
+          print(f'columns ({len(train.columns)}): {list(train.columns)[:8]} ...')
+          "
+
+      # 6. Upload Preprocessed Dataset as Artifact
+      - name: Upload Preprocessed Dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset_preprocessing
+          path: preprocessing/dataset_preprocessing/
+          retention-days: 30
+
+      # 7. Upload Preprocessing Log
+      - name: Upload Preprocessing Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preprocessing-log
+          path: preprocessing/preprocessing.log
+          retention-days: 7

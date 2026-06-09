@@ -1,0 +1,11 @@
+# Kriteria 1 — Eksperimen & Preprocessing
+# Python 3.12.7
+
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.1
+joblib==1.4.2
+matplotlib==3.9.2
+seaborn==0.13.2
+jupyter==1.1.1
+ipykernel==6.29.5
